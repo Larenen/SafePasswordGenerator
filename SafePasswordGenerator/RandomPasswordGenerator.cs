@@ -1,0 +1,91 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace SafePasswordGenerator
+{
+    public sealed class RandomPasswordGenerator : IDisposable
+    {
+        private readonly PasswordOptions options;
+
+        private readonly RNGCryptoServiceProvider rngCsp = new();
+
+        private readonly Dictionary<CharType, string> randomChars = new()
+        {
+            { CharType.Letter, "abcdefghijklmnoprsuwxyz" },
+            { CharType.Number, "0123456789" },
+            { CharType.Special, "!@#$_-" }
+        };
+
+        public RandomPasswordGenerator(PasswordOptions options = null)
+        {
+            this.options = options ?? new PasswordOptions();
+        }
+
+        public string Generate()
+        {
+            var uniqueChars = new HashSet<char>(options.RequiredUniqueChars);
+            var plainTextPassword = new StringBuilder(options.RequiredLength);
+            int randomPlainTextIndex() => RandomIndex(options.RequiredLength);
+
+            while (uniqueChars.Count != options.RequiredUniqueChars)
+            {
+                uniqueChars.Add(randomChars[CharType.Letter][randomPlainTextIndex()]);
+            }
+
+            foreach (var singleChar in uniqueChars)
+            {
+                plainTextPassword.Append(singleChar);
+            }
+
+            for (var i = options.RequiredUniqueChars; i < options.RequiredLength; ++i)
+            {
+                plainTextPassword.Append(randomChars[CharType.Letter][randomPlainTextIndex()]);
+            }
+
+            if (options.RequireDigit)
+            {
+                plainTextPassword[randomPlainTextIndex()] = GetRandomNumber();
+            }
+
+            if (options.RequireUppercase)
+            {
+                var randomIndex = randomPlainTextIndex();
+                plainTextPassword[randomIndex] = char.ToUpper(plainTextPassword[randomIndex]);
+            }
+
+            if (options.RequireNonAlphanumeric)
+            {
+                plainTextPassword[randomPlainTextIndex()] = GetRandomSpecialChar();
+            }
+
+            return plainTextPassword.ToString();
+        }
+
+        public void Dispose()
+        {
+            rngCsp.Dispose();
+        }
+
+        private char GetRandomNumber()
+        {
+            var randomIndex = RandomIndex(randomChars[CharType.Number].Length);
+            return randomChars[CharType.Number][randomIndex];
+        }
+
+        private char GetRandomSpecialChar()
+        {
+            var randomIndex = RandomIndex(randomChars[CharType.Special].Length);
+            return randomChars[CharType.Special][randomIndex];
+        }
+
+        private int RandomIndex(int maxValue)
+        {
+            var randomNumber = new byte[1];
+            rngCsp.GetBytes(randomNumber);
+
+            return randomNumber[0] % maxValue;
+        }
+    }
+}
