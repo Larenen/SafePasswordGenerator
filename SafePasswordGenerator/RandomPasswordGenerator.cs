@@ -28,6 +28,7 @@ namespace SafePasswordGenerator
             var uniqueChars = new HashSet<char>(options.RequiredUniqueChars);
             var plainTextPassword = new StringBuilder(options.RequiredLength);
             int randomPlainTextIndex() => RandomIndex(options.RequiredLength);
+            var usedIndexes = new List<int>(2);
 
             while (uniqueChars.Count != options.RequiredUniqueChars)
             {
@@ -44,20 +45,35 @@ namespace SafePasswordGenerator
                 plainTextPassword.Append(randomChars[CharType.Letter][randomPlainTextIndex()]);
             }
 
-            if (options.RequireDigit)
-            {
-                plainTextPassword[randomPlainTextIndex()] = GetRandomNumber();
-            }
-
             if (options.RequireUppercase)
             {
                 var randomIndex = randomPlainTextIndex();
+                usedIndexes.Add(randomIndex);
+
                 plainTextPassword[randomIndex] = char.ToUpper(plainTextPassword[randomIndex]);
+            }
+
+            if (options.RequireDigit)
+            {
+                var randomIndex = randomPlainTextIndex();
+                while(usedIndexes.Contains(randomIndex))
+                {
+                    randomIndex = randomPlainTextIndex();
+                }
+                usedIndexes.Add(randomIndex);
+
+                plainTextPassword[randomIndex] = GetRandomNumber();
             }
 
             if (options.RequireNonAlphanumeric)
             {
-                plainTextPassword[randomPlainTextIndex()] = GetRandomSpecialChar();
+                var randomIndex = randomPlainTextIndex();
+                while (usedIndexes.Contains(randomIndex))
+                {
+                    randomIndex = randomPlainTextIndex();
+                }
+
+                plainTextPassword[randomIndex] = GetRandomSpecialChar();
             }
 
             return plainTextPassword.ToString();
